@@ -4,8 +4,6 @@ bot/telegram.py — Low-level Telegram Bot API helpers.
 Responsibilities:
   - Register the webhook URL with Telegram
   - Send messages back to users
-
-All network calls go through httpx so they are non-blocking.
 """
 
 import logging

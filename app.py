@@ -61,7 +61,7 @@ async def get_run_log():
     if not os.path.exists(log_path):
         return Response(content="Log file not found", status_code=404)
         
-    return FileResponse(log_path, media_type="application/jsonlines")
+    return FileResponse(log_path, media_type="text/plain")
 
 
 @app.post("/webhook")

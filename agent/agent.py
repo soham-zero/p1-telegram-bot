@@ -15,17 +15,23 @@ class DataAgent:
         self.provider = provider
         self.memory = ConversationMemory()
         
-        railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "localhost")
-        self.log_url = f"https://{railway_domain}/logs/run.jsonl"
-        if "localhost" in self.log_url:
-            self.log_url = os.environ.get("WEBHOOK_URL", "").replace("/webhook", "/logs/run.jsonl")
+        # The evaluator requires a public URL to the log file.
+        # We extract the base domain from your WEBHOOK_URL (since you set that manually).
+        webhook = os.environ.get("WEBHOOK_URL", "")
+        if webhook and webhook.endswith("/webhook"):
+            self.log_url = webhook.replace("/webhook", "/logs/run.jsonl")
+        else:
+            # Fallback just in case
+            railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "localhost")
+            self.log_url = f"https://{railway_domain}/logs/run.jsonl"
         
         self.system_prompt = (
-            "You are a strict data analysis agent. You have access to a Python execution tool. "
-            "IMPORTANT: If asked for JSON, you must reply with ONLY the raw JSON object. "
-            "Do not include markdown code blocks (e.g. ```json ... ```). "
-            f"Your final reply must ALWAYS be in this exact format: {{\"answer\": <your answer>, \"log_url\": \"{self.log_url}\"}} "
-            "If you need to analyze data, use the execute_python tool. Keep executing code until you find the final answer."
+            "You are a strict data analysis agent. You have access to a Python execution tool.\n"
+            "If the user's prompt explicitly asks you to reply with a JSON object, your final reply MUST be exactly one JSON object with these two keys:\n"
+            f'{{"answer": <the exact json object the user asked for>, "log_url": "{self.log_url}"}}\n'
+            "If the user DOES NOT ask for a JSON object (e.g. general conversation), just reply normally in plain text.\n"
+            "Do not include markdown code blocks (e.g. ```json ... ```) when returning JSON.\n"
+            "If you need to analyze data, use the execute_python tool."
         )
 
     def _strip_markdown(self, text: str) -> str:

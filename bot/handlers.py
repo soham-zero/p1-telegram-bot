@@ -4,10 +4,6 @@ bot/handlers.py — Telegram update routing.
 Responsibilities:
   - Parse incoming Telegram Update objects
   - Route each update type to the correct action
-  - Reply "Hi" to every incoming text message (Stage 1)
-
-This module is intentionally kept simple. As the agent is introduced in later
-stages, routing logic will be extended here without restructuring the project.
 """
 
 import logging
