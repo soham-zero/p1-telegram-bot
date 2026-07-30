@@ -18,13 +18,14 @@ from dotenv import load_dotenv
 from bot.telegram import set_webhook
 from bot.handlers import handle_update
 
-load_dotenv()
+load_dotenv(".env.local")
+load_dotenv()  # Fallback to .env if .env.local doesn't exist
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN: str = os.environ["BOT_TOKEN"]
-WEBHOOK_URL: str = os.environ["WEBHOOK_URL"]
+WEBHOOK_URL: str | None = os.getenv("WEBHOOK_URL")
 PORT: int = int(os.getenv("PORT", "8000"))
 
 
@@ -34,9 +35,12 @@ PORT: int = int(os.getenv("PORT", "8000"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Registering Telegram webhook …")
-    await set_webhook(BOT_TOKEN, WEBHOOK_URL)
-    logger.info("Webhook registered: %s", WEBHOOK_URL)
+    if WEBHOOK_URL:
+        logger.info("Registering Telegram webhook …")
+        await set_webhook(BOT_TOKEN, WEBHOOK_URL)
+        logger.info("Webhook registered: %s", WEBHOOK_URL)
+    else:
+        logger.warning("No WEBHOOK_URL provided. Skipping webhook registration. (Normal for local dev without ngrok)")
     yield
     # Nothing to tear down at this stage
 
