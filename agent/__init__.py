@@ -1,1 +1,3 @@
-"""agent/__init__.py — Placeholder for Stage 2 agent logic."""
+from .llm import generate_response
+
+__all__ = ["generate_response"]

@@ -7,3 +7,6 @@ httpx==0.27.2
 
 # Environment variable loading
 python-dotenv==1.0.1
+
+# LLM integration (Groq)
+groq==0.13.1

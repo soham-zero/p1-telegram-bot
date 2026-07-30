@@ -12,6 +12,7 @@ stages, routing logic will be extended here without restructuring the project.
 
 import logging
 from bot.telegram import send_message
+from agent import generate_response
 
 logger = logging.getLogger(__name__)
 
@@ -37,4 +38,9 @@ async def handle_update(update: dict, token: str) -> None:
 
     if text is not None:
         logger.info("Message from chat_id=%s: %s", chat_id, text)
-        await send_message(token, chat_id, "Hi")
+        
+        # Get AI response from Gemini
+        ai_response = await generate_response(text)
+        
+        # Send back to Telegram
+        await send_message(token, chat_id, ai_response)
