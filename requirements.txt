@@ -10,3 +10,7 @@ python-dotenv==1.0.1
 
 # LLM integration (Groq)
 groq==0.13.1
+
+# Data Analysis Libraries (for the python runner)
+pandas==2.2.2
+requests==2.32.3

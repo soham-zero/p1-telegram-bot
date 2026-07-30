@@ -42,36 +42,33 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("No WEBHOOK_URL provided. Skipping webhook registration. (Normal for local dev without ngrok)")
     yield
-    # Nothing to tear down at this stage
 
 
 app = FastAPI(title="TDS Bot", lifespan=lifespan)
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
 @app.get("/")
 async def health_check() -> dict:
-    """Simple liveness probe used by Railway and external monitors."""
     return {"status": "running"}
+
+
+@app.get("/logs/run.jsonl")
+async def get_run_log():
+    from fastapi.responses import FileResponse
+    import os
+    
+    log_path = "logs/run.jsonl"
+    if not os.path.exists(log_path):
+        return Response(content="Log file not found", status_code=404)
+        
+    return FileResponse(log_path, media_type="application/jsonlines")
 
 
 @app.post("/webhook")
 async def webhook(request: Request) -> Response:
-    """
-    Receive Telegram Update payloads and dispatch them to the handler.
-    Always returns HTTP 200 so Telegram does not retry the request.
-    """
     update = await request.json()
     await handle_update(update, BOT_TOKEN)
     return Response(status_code=200)
-
-
-# ---------------------------------------------------------------------------
-# Local development entry-point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)

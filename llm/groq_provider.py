@@ -17,20 +17,23 @@ class GroqProvider(BaseLLMProvider):
         else:
             self.client = AsyncGroq(api_key=api_key)
 
-    async def generate(self, messages: List[Dict[str, str]]) -> str:
+    async def generate(self, messages: List[Dict[str, str]], tools: List[Dict] = None) -> any:
         if not self.client:
-            return "Error: GROQ_API_KEY is not configured."
+            raise RuntimeError("GROQ_API_KEY is not configured.")
             
         try:
-            # We enforce JSON mode softly via system prompt in the Agent,
-            # but Groq supports standard OpenAI chat completion formatting.
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                max_tokens=1024,
-                temperature=0.0  # Temperature 0 for deterministic data analysis/JSON
-            )
-            return response.choices[0].message.content
+            kwargs = {
+                "model": self.model_name,
+                "messages": messages,
+                "max_tokens": 1024,
+                "temperature": 0.0
+            }
+            if tools:
+                kwargs["tools"] = tools
+                kwargs["tool_choice"] = "auto"
+                
+            response = await self.client.chat.completions.create(**kwargs)
+            return response.choices[0].message
         except Exception as e:
             logger.error("Groq API error: %s", e)
-            return "Sorry, I encountered an error while thinking."
+            raise

@@ -16,9 +16,6 @@ from agent import DataAgent
 from llm.groq_provider import GroqProvider
 
 logger = logging.getLogger(__name__)
-
-# Initialize the global agent instance
-# We pass the GroqProvider into the Agent, keeping concerns separated.
 data_agent = DataAgent(provider=GroqProvider())
 
 async def handle_update(update: dict, token: str) -> None:
@@ -38,9 +35,5 @@ async def handle_update(update: dict, token: str) -> None:
 
     if text is not None:
         logger.info("Message from chat_id=%s: %s", chat_id, text)
-        
-        # Get AI response from the Agent (which handles memory and markdown stripping)
         ai_response = await data_agent.run(chat_id, text)
-        
-        # Send back to Telegram
         await send_message(token, chat_id, ai_response)
