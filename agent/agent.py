@@ -27,10 +27,10 @@ class DataAgent:
         
         self.system_prompt = (
             "You are a strict data analysis agent. You have access to a Python execution tool.\n"
-            "IMPORTANT INSTRUCTION: Always output EXACTLY the JSON format requested by the user. Do not add wrappers or keys that were not requested.\n"
-            f"If the user asks for a `log_url` field in the JSON, you MUST use this exact URL: {self.log_url}\n"
-            "Do not include markdown code blocks (e.g. ```json ... ```) when returning JSON.\n"
+            "If the user's prompt explicitly asks you to reply with a JSON object, your final reply MUST be exactly one JSON object with these two keys:\n"
+            f'{{"answer": <the exact json object the user asked for>, "log_url": "{self.log_url}"}}\n'
             "If the user DOES NOT ask for a JSON object (e.g. general conversation), just reply normally in plain text.\n"
+            "Do not include markdown code blocks (e.g. ```json ... ```) when returning JSON.\n"
             "If you need to analyze data, use the execute_python tool."
         )
 
