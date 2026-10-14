@@ -22,6 +22,25 @@ An autonomous, tool-calling Telegram bot engineered to solve complex data analys
 
 ---
 
+## 🧠 Beyond an LLM Wrapper: True Agentic Architecture
+Many chatbot projects are simple **LLM wrappers**—they take raw user input, pass it to a single completion endpoint, and blindly relay whatever the model generates. 
+This project is a **full-fledged autonomous agent (`DataAgent`)**. It operates using an iterative **ReAct (Reason + Act)** control loop with sandboxed tool invocation, dynamic self-correction, and stateful memory:
+### 1. 🛠️ How Tools are Handled
+The agent has native access to an isolated execution tool: **`execute_python`** (`tools/python_runner.py`):
+- **Tool Registration:** Tool interfaces are exposed to the LLM via OpenAI/Groq-compatible JSON schemas (`tools/__init__.py`).
+- **Dynamic Code Synthesis:** When presented with complex mathematical, tabular, or external data questions (e.g. MOSPI datasets, multi-step statistics), the agent **does not hallucinate calculations**. Instead, it generates executable Python code leveraging libraries like `pandas`, `numpy`, and `httpx`.
+- **Subprocess Isolation:** The Python code is written to a temporary workspace and executed inside an isolated OS subprocess via `subprocess.run()`. Both standard output (`stdout`) and error streams (`stderr`) are captured.
+- **Runtime Self-Correction:** If the executed code fails (e.g., unexpected missing columns, data-type mismatches, or network timeouts), the agent intercepts the traceback error, diagnoses what went wrong, writes a revised script, and re-runs it automatically until a valid answer is computed.
+### 2. 💾 How Memory is Stored & Utilized
+The bot does not treat interactions as one-off stateless prompts:
+- **Per-Chat Session Isolation:** Memory is maintained per individual `chat_id`, keeping conversations isolated and secure across multiple concurrent users.
+- **Contextual Turn Tracking:** The agent logs the entire interaction trajectory—user prompts, internal assistant reasoning, tool invocation requests, and tool execution outputs (`role: "tool"`).
+- **Multi-Turn Reasoning:** Users can naturally ask iterative questions (e.g., *"What is the top state?"* followed by *"Now calculate the standard deviation for that state's last 5 years"*). The agent uses its accumulated session memory to reference previous datasets and results without requiring the user to restate the problem.
+### 3. 📜 Public Observable Audit Trail
+Every internal thought, tool call, script payload, runtime output, and final synthesis is appended to `logs/run.jsonl` in strict JSONL format. This public audit trail allows graders and evaluators to inspect the agent's exact decision tree in real time via `GET /logs/run.jsonl`.
+
+---
+
 ## 🏗️ Architecture & Workflow
 
 ```mermaid
