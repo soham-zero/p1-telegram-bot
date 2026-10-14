@@ -1,104 +1,162 @@
-# TDS AI Data Analyst Telegram Bot
+# 🤖 TDS Autonomous Data Analysis Telegram Agent
 
-An incrementally developed AI Data Analysis Agent for the IITM Tools in Data Science (TDS) project.
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Groq](https://img.shields.io/badge/Groq-LPU%20Inference-f55036?style=flat&logo=openai&logoColor=white)](https://groq.com/)
+[![Telegram Bot API](https://img.shields.io/badge/Telegram-Bot%20API-2CA5E0?style=flat&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+[![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat&logo=railway&logoColor=white)](https://railway.app/)
 
-Deployed on **Railway** · Backend: **FastAPI** · Language: **Python 3.12+**
-
----
-
-## Architecture
-
-```
-Telegram User → Telegram Bot API → FastAPI (Railway)
-                                        │
-                                   Agent Orchestrator  ← (Stage 2+)
-                                        │
-                              Tools / LLM / Memory     ← (Stage 3+)
-```
-
-The system is designed to grow incrementally — every commit leaves the bot in a fully deployable state.
+An autonomous, tool-calling Telegram bot engineered to solve complex data analysis tasks over real-world datasets on the fly. Built with **FastAPI**, powered by **Groq LPU inference**, and featuring a recursive Python code-execution sandbox with live **public audit logging (`.jsonl`)**.
 
 ---
 
-## Project Structure
+## 🌟 Key Highlights
 
+- **⚡ Low-Latency Agentic Reasoning:** Leverages Groq's LPU inference for high-speed chain-of-thought analysis and tool calling.
+- **🐍 Autonomous Code Execution Sandbox:** Writes and executes dynamic Python (Pandas, Numpy, HTTPX) scripts in a sandboxed subprocess to inspect datasets and compute verified answers.
+- **📜 Evaluator-Grade Public Audit Logging:** Automatically logs thought steps, tool calls, and outputs to an append-only `logs/run.jsonl` served publicly via `GET /logs/run.jsonl` (downloadable via `wget`/`curl`).
+- **🎯 Dual-Mode Responses:**
+  - **Conversational Mode:** Natural language dialogue with multi-turn memory for casual queries.
+  - **Structured Evaluation Mode:** Strict 2-key JSON output (`{"answer": <result>, "log_url": "<url>"}`) strictly adhering to IITM automated evaluator specifications.
+- **🚀 Cloud Native:** Zero-downtime webhook architecture packaged for one-click deployment on Railway.
+
+---
+
+## 🏗️ Architecture & Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Telegram User / Grader
+    participant TG as Telegram Bot API
+    participant App as FastAPI Webhook (/webhook)
+    participant Agent as DataAgent Loop
+    participant Groq as Groq LPU (LLM)
+    participant Runner as Python Sandbox
+    participant Logger as run.jsonl (Audit Trail)
+
+    User->>TG: Sends query / dataset question
+    TG->>App: POST /webhook (Update)
+    App->>Agent: Process message with chat history
+    
+    loop Tool Calling Loop
+        Agent->>Groq: Prompt + Tools Schema
+        Groq-->>Agent: Code Execution Request (Python)
+        Agent->>Logger: Append Thought & Tool Call
+        Agent->>Runner: Execute script (subprocess)
+        Runner-->>Agent: Return stdout / error
+        Agent->>Logger: Append Execution Result
+    end
+
+    Agent->>Groq: Synthesize final answer
+    Groq-->>Agent: Final structured output
+    Agent->>Logger: Append Final Answer & Log URL
+    Agent-->>App: Completed reply
+    App->>TG: sendMessage (Markdown / JSON)
+    TG-->>User: Delivers answer
 ```
+
+---
+
+## 📁 Repository Structure
+
+```text
 p1-telegram-bot/
-├── app.py              # FastAPI application & webhook entrypoint
-├── requirements.txt
-├── railway.json
-├── .env.example
+├── agent/
+│   ├── agent.py          # Core DataAgent loop & prompt management
+│   └── logger.py         # Thread-safe JSONL audit trail logger
 ├── bot/
-│   ├── telegram.py     # Telegram API helpers (webhook, sendMessage)
-│   └── handlers.py     # Update routing logic
-├── agent/              # Stage 2 — LLM agent (placeholder)
-├── tools/              # Stage 3 — callable tools (placeholder)
-├── logs/               # Runtime logs (git-ignored)
-└── temp/               # Temporary files (git-ignored)
+│   ├── handlers.py       # Telegram update & message routing
+│   └── telegram.py       # Asynchronous Telegram HTTP API client
+├── llm/
+│   └── groq_provider.py  # Groq client integration & tool definitions
+├── tools/
+│   ├── __init__.py       # Tool registry & OpenAI-compatible schemas
+│   └── python_runner.py  # Sandboxed Python code executor (subprocess)
+├── logs/
+│   └── run.jsonl         # Publicly served execution audit log
+├── app.py                # FastAPI server, webhook & static log route
+├── requirements.txt      # Python dependencies
+├── railway.json          # Railway deployment configuration
+└── .env.example          # Template for environment variables
 ```
 
 ---
 
-## Environment Variables
+## 🔌 API Endpoints
 
-Copy `.env.example` to `.env` and fill in the values:
-
-| Variable      | Description                                      |
-|---------------|--------------------------------------------------|
-| `BOT_TOKEN`   | Telegram Bot token from @BotFather               |
-| `WEBHOOK_URL` | Public HTTPS URL for the `/webhook` endpoint     |
-| `PORT`        | Server port (Railway injects this automatically) |
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/webhook` | Receives real-time update payloads from Telegram. |
+| `GET` | `/logs/run.jsonl` | Serves the full execution audit log (wget-able for graders). |
+| `GET` | `/health` | Service liveness probe. |
 
 ---
 
-## Local Development
+## 🛠️ Environment Variables
+
+Create a `.env` file in the project root (or configure under **Variables** in Railway):
+
+| Variable | Required | Description | Example |
+| :--- | :---: | :--- | :--- |
+| `BOT_TOKEN` | **Yes** | Telegram Bot API token from [@BotFather](https://t.me/botfather) | `8617928520:AAGh...` |
+| `WEBHOOK_URL` | **Yes** | Public HTTPS base URL where the bot is hosted | `https://p1-telegram-bot.up.railway.app` |
+| `GROQ_API_KEY` | **Yes** | GroqCloud API key | `gsk_...` |
+| `GROQ_MODEL` | No | Active Groq model identifier *(default: `llama-3.1-8b-instant`)* | `llama-3.1-8b-instant` |
+| `PORT` | No | Port for Uvicorn server *(injected automatically on Railway)* | `8000` |
+
+---
+
+## 🚀 Local Development Setup
+
+### 1. Clone & Set Up Virtual Environment
 
 ```bash
-# 1. Create and activate a virtual environment
-python -m venv .venv
-.venv\Scripts\activate       # Windows
-# source .venv/bin/activate  # macOS / Linux
+git clone https://github.com/<your-username>/p1-telegram-bot.git
+cd p1-telegram-bot
+python -m venv venv
 
-# 2. Install dependencies
+# Windows
+venv\Scripts\activate
+
+# Linux / macOS
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-# 3. Configure environment
+### 3. Configure Environment
+
+```bash
 cp .env.example .env
-# Edit .env and fill in BOT_TOKEN and WEBHOOK_URL
+# Edit .env with your BOT_TOKEN and GROQ_API_KEY
+```
 
-# 4. Expose local server with ngrok (for webhook testing)
+### 4. Run with Webhook Tunnel (e.g. ngrok or Cloudflare)
+
+Since Telegram requires a public HTTPS URL for webhooks:
+
+```bash
+# Terminal 1: Start tunnel
 ngrok http 8000
-# Copy the https:// URL and set it as WEBHOOK_URL in .env
 
-# 5. Start the server
-python app.py
+# Terminal 2: Run FastAPI server (set WEBHOOK_URL to your ngrok URL in .env)
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ---
 
-## API Endpoints
+## 🚢 Production Deployment (Railway)
 
-| Method | Path       | Description                        |
-|--------|------------|------------------------------------|
-| GET    | `/`        | Health check — returns `{"status": "running"}` |
-| POST   | `/webhook` | Receives Telegram updates          |
-
----
-
-## Deployment (Railway)
-
-1. Push to `main` — Railway auto-deploys via the `railway.json` config.
-2. Set `BOT_TOKEN` and `WEBHOOK_URL` in the Railway dashboard under **Variables**.
-3. Railway injects `$PORT` automatically — no manual configuration needed.
-
----
-
-## Development Stages
-
-| Stage | Status      | Description                          |
-|-------|-------------|--------------------------------------|
-| 1     | ✅ Complete  | FastAPI + Telegram webhook → "Hi"    |
-| 2     | 🔜 Next     | LLM agent integration (Gemini)       |
-| 3     | 🔜 Planned  | Tool calling (file parser, runner)   |
-| 4     | 🔜 Planned  | Memory & conversation context        |
-| 5     | 🔜 Planned  | Full data analysis agent             |
+1. Connect your repository to **Railway**.
+2. Railway detects `railway.json` and builds the environment automatically.
+3. In the Railway dashboard under **Variables**, define:
+   - `BOT_TOKEN`
+   - `WEBHOOK_URL` (`https://<your-railway-domain>.up.railway.app`)
+   - `GROQ_API_KEY`
+   - `GROQ_MODEL` (`llama-3.1-8b-instant`)
+4. Upon container startup, `app.py` automatically registers the webhook with Telegram (`/setWebhook`).
